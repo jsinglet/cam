@@ -1,0 +1,1 @@
+[DUPL,DUPL,DUPL,LOAD (ConstInt 2),SWAP,LOAD (ConstInt 1),EQUAL,BRANCH (Adr [LOAD (ConstInt 2),RETURN]) (Adr [LOAD (ConstInt 4),RETURN]),CALL,SWAP,LOAD (ConstInt 5),ADD,STOP]
