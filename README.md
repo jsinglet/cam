@@ -3,11 +3,13 @@ Categorical Abstract Machine
 
 Author: John L. Singleton <jls@cs.ucf.edu>
 
+```
 Usage: cam [ -lex | -parse | -vm | -run ] FILE
 -lex:    	Lex the source of the program contained in FILE.
 -parse:		Parse the source of program contained in FILE (implies -lex).
 -vm:		Execute the VM code contained in FILE.
 -run:           Lex, Parse, and Execute the code contained in FILE.
+```
 
 Program examples are in `programs`.
 
