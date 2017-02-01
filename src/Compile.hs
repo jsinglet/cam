@@ -12,8 +12,8 @@ compile_binop M_ADD = ADD
 compile_binop M_SUB = SUB
 compile_binop M_MULT = MULT
 compile_binop M_EQ = EQUAL
-compile_binop M_LT = error "Operation < Unimplemented" 
-compile_binop M_GT = error "Operation > Unimplemented"
+compile_binop M_LT = B_LT
+compile_binop M_GT = B_GT
 
 compile_var :: (Show a, Eq a) =>  [a] -> a -> [Instruction]
 compile_var env v = case env of
