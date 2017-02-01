@@ -110,3 +110,8 @@ doCompile f =
     putStrLn $ "File written to: " ++ (replaceExtension f ".o")
     
 
+-- for debugging
+
+evals :: String -> Value
+evals s = eval (fst $ expression $ getTokens s)
+

@@ -18,11 +18,11 @@ data Value =
   | Pair (Ref Value) (Ref Value)
   | Adr [Instruction]
   | Nil
-           deriving (Read, Show)
+           deriving (Read, Show, Eq)
 
 
 data Ref a = Ref Int a
-  deriving (Read)
+  deriving (Read, Eq)
 
 data Instruction =
   STOP
@@ -34,7 +34,7 @@ data Instruction =
   | ADD  | SUB  | MULT   | EQUAL
   | CALL | RETURN
   | BRANCH Value Value
-  deriving (Show, Read)
+  deriving (Show, Read, Eq)
 
 formatBlock :: String -> [Value] -> String 
 formatBlock title mem = printf "%s %s" title (tshowAr mem)
@@ -85,7 +85,10 @@ exec (ixn@CONS:code) m@mem vs@(v1:v2:stack) = _camTrace (ixn, m, vs) $ let (p,me
 exec (ixn@ADD:code) m@mem vs@(ConstInt a:ConstInt b:stack) = _camTrace (ixn,m,vs) $ exec code mem ((ConstInt (a + b)):stack)
 exec (ixn@SUB:code) m@mem vs@(ConstInt a:ConstInt b:stack) = _camTrace (ixn,m,vs) $ exec code mem ((ConstInt (a - b)):stack)
 exec (ixn@MULT:code) m@mem vs@(ConstInt a:ConstInt b:stack) = _camTrace (ixn,m,vs) $ exec code mem ((ConstInt (a * b)):stack)
-exec (ixn@EQUAL:code) m@mem vs@(ConstInt a:ConstInt b:stack) = _camTrace (ixn,m,vs) $ exec code mem ((ConstBool (a == b)):stack)
+
+exec (ixn@EQUAL:code) m@mem vs@(a:b:stack) = _camTrace (ixn,m,vs) $ exec code mem ((ConstBool (a == b)):stack)
+
+
 exec (ixn@CALL:code) m@mem vs@(Adr code':v:stack) = _camTrace (ixn,m,vs) $ exec code' mem (v:(Adr code:stack))
 exec (ixn@RETURN:_) m@mem vs@(v:Adr code':stack) =  _camTrace (ixn,m,vs) $ exec code' mem (v:stack)
 exec (ixn@(BRANCH adr1 adr2):code) m@mem vs@(ConstBool b:stack) = _camTrace (ixn,m,vs) $ if b then
