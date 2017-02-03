@@ -49,6 +49,7 @@ executable cam-sim
                      , mtl
                      , filepath
                      , cam
+                     , scotty
 
 test-suite cam-test
   type:                exitcode-stdio-1.0
