@@ -10,14 +10,27 @@ import Compile
 Abstract Syntax
 ===============
 
+Marie Simulator
+---------------
+
+Baci Simulation 
+---------------
+c-- language 
+
+Ocaml Simulator
+---------------
+
+
 e ::=
   | ident
   | e1 e2      -- application
   | e1 op e2   -- binop 
-  | (e1, e2)   -- pair
+  | [e1, e2]   -- pair
   | if e1 then e2 else e3
   | let {rec} p = e in e
   | fun p -> e
+
+if a > 3 then fun x -> x + 1 else fun x -> x - 1 7
 
 p ::=
   | ()
