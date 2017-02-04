@@ -15,6 +15,8 @@ data Token
     | TokenDivide
     | TokenOpenParen
     | TokenCloseParen
+    | TokenOpenPair
+    | TokenClosePair
     | TokenIdent String
     | TokenLet
     | TokenLetRec
@@ -44,6 +46,8 @@ singleSpecials = [
   , Special TokenMultiply   "*"
   , Special TokenDivide     "/"
   , Special TokenComma      ","
+  , Special TokenOpenPair   "["
+  , Special TokenClosePair  "]"
   ]
 
 keywords :: [Special]

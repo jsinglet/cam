@@ -82,11 +82,12 @@ term t = error $ "Unknown Term: " ++ (show t)
 expression :: [Token] -> (EXP, [Token])
 
 -- pairs
-expression (TokenOpenParen:xs) = 
+
+expression (TokenOpenPair:xs) = 
   let (p1, rest) = expression xs in
     let rest1 = skip rest TokenComma in
-      let (p2, rest2) = expression rest1 in
-        let rest3 = skip rest2 TokenCloseParen in 
+      let (p2, rest2) = expression rest1 in 
+        let rest3 = skip rest2 TokenClosePair in 
           (EXP_PAIR p1 p2, rest3)
 
 -- structures
@@ -104,11 +105,16 @@ expression (TokenIf:xs) =
 expression (TokenFun:xs) = case (xs) of
   (TokenIdent i:xs) -> let rest = (skip xs TokenArrow) in
     let (e1, rest1) = expression rest in
-      maybeApply (EXP_FUN i e1, rest1)
+      (EXP_FUN i e1, rest1)
   _                 -> error $ "Expected a functional parameter (ident) following lambda but found: " ++ (show (head xs))
 
-  
+
 -- application
+expression (TokenOpenParen:xs) = 
+  let (e1, rest) = expression xs in
+    let rest1 = skip rest TokenCloseParen in 
+      let (e2, rest2) = expression rest1 in
+          (EXP_APP e1 e2, rest2)
 
 
 expression (TokenLet:xs) = case (xs) of
