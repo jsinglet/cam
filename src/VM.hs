@@ -44,6 +44,10 @@ _camTrace (b@(BRANCH v1 v2),mem,values)= trace (printf "BRANCH\n\tIF   =%s\n\tEL
 
 _camTrace (instruction,mem,values)= trace (printf "%-30s %-10s %-10s" (ishow instruction) (formatBlock "MEM" mem) (formatBlock "STACK" values))
 
+dumpStack stack = trace (printf "[CAM FAULT]\n\n\nSTACKDUMP:\n\n %-10s" (formatBlock "STACK" stack))
+
+
+
 instance Show (Ref a) where
   show (Ref idx b) = printf "#%s" (show idx)
 
@@ -101,7 +105,7 @@ exec (ixn@(BRANCH adr1 adr2):code) m@mem vs@(ConstBool b:stack) = _camTrace (ixn
                                                        else
                                                            exec code mem (adr2:stack)
 -- fall thru case
-exec (a:_) _ _ = error $ "Invalid Instruction: " ++ (show a)
+exec (a:_) _ stack = dumpStack stack $ error $ "Invalid Instruction: " ++ (show a)
 
 
 

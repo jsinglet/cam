@@ -1,0 +1,7 @@
+let double =
+    fun f ->
+        fun x -> f (f x)
+    in let sq =
+       fun x -> x * x
+
+    in (double sq) 5

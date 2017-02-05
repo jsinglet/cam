@@ -145,7 +145,7 @@ expression xs = let (e1, rest) = term xs in
         (EXP_BINOP operator e1 e2, rest2)
   else
     -- if it's a special token, we are done parsing
-    if (head rest) `elem` [TokenIn,TokenCloseParen] then (e1, rest)
+    if (head rest) `elem` [TokenIn,TokenCloseParen, TokenThen, TokenElse] then (e1, rest)
     -- otherwise, we have another expression 
     else let (e2, rest1) = expression rest in 
       (EXP_APP e1 e2, rest1)
