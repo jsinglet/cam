@@ -77,7 +77,9 @@ term :: [Token] -> (EXP,[Token])
 term (TokenBooleanLiteral b:xs) = (EXP_BOOL b, xs)
 term (TokenIntegerLiteral i:xs) = (EXP_INT  i, xs)
 term (TokenIdent s:xs) = (EXP_VAR s, xs)
-term t = error $ "Unknown Term: " ++ (show t)
+term (TokenOpenParen:xs) = let (e, rest) = expression xs in (e, skip rest TokenCloseParen)
+--term xs = expression xs
+term t = error $ "Unknown Term: " ++ show t
 
 expression :: [Token] -> (EXP, [Token])
 
@@ -110,11 +112,11 @@ expression (TokenFun:xs) = case (xs) of
 
 
 -- application
-expression (TokenOpenParen:xs) = 
-  let (e1, rest) = expression xs in
-    let rest1 = skip rest TokenCloseParen in 
-      let (e2, rest2) = expression rest1 in
-          (EXP_APP e1 e2, rest2)
+-- expression (TokenOpenParen:xs) = 
+--   let (e1, rest) = expression xs in
+--     let rest1 = skip rest TokenCloseParen in 
+--       let (e2, rest2) = expression rest1 in
+--           (EXP_APP e1 e2, rest2)
 
 
 expression (TokenLet:xs) = case (xs) of
@@ -136,13 +138,17 @@ expression (TokenLetRec:xs) = case (xs) of
 
 expression xs = let (e1, rest) = term xs in
   if rest == [] then (e1, rest) else
-  if (head rest) `elem` ops then 
+  if (head rest) `elem` ops then -- binary expression 
   let (op:rest1) = rest in
     let operator = getOp op in
       let (e2, rest2) = expression rest1 in
         (EXP_BINOP operator e1 e2, rest2)
   else
-    (e1, rest)
+    -- if it's a special token, we are done parsing
+    if (head rest) `elem` [TokenIn,TokenCloseParen] then (e1, rest)
+    -- otherwise, we have another expression 
+    else let (e2, rest1) = expression rest in 
+      (EXP_APP e1 e2, rest1)
 
 
 maybeApply :: (EXP, [Token]) -> (EXP, [Token])
