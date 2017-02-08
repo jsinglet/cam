@@ -88,6 +88,9 @@ singleSpecialToToken c = let Special t _:_ = filter (\(Special _ s) -> s == [c])
 isSpecial :: Char -> Bool
 isSpecial c = [c] `elem` map (\(Special _ s) -> s) singleSpecials
 
+isMultiSpecial :: Char -> Bool
+isMultiSpecial c = [c] `elem`   map (\(Special _ s) -> s) (filter (\(Special t _) -> t `elem` [TokenAssign, TokenGt]) singleSpecials)
+
 keywordToToken :: String -> Token
 keywordToToken c = let Special t _:_ = filter (\(Special _ s) -> s == c) keywords in t
 
@@ -120,7 +123,7 @@ tokenize (x:xs)
   | isSpecial x = let t = singleSpecialToToken x in                     -- case 1, it's a special or an arrow
       -- we need to look ahead one if we have a minus, just in case we have an
       -- arrow operator
-      if isSpecial (head xs) then let (t,rest) = readSpecial [x] xs in t : tokenize rest
+      if isMultiSpecial (head xs) then let (t,rest) = readSpecial [x] xs in t : tokenize rest
       else t : tokenize xs 
   | isDigit x = let (t,rest) = readNumber [x] xs in  t : tokenize rest  -- case 2, it's a number
   | isIgnore x = tokenize xs                                            -- case 3, it's an ignore
