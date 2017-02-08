@@ -53,7 +53,7 @@ singleSpecials = [
 keywords :: [Special]
 keywords = [
     Special TokenLet    "let"
-  , Special TokenLetRec "letrec"
+  , Special TokenLetRec "rec"
   , Special TokenIn     "in"
   , Special TokenIf     "if"
   , Special TokenThen   "then"
@@ -62,6 +62,19 @@ keywords = [
   , Special TokenSnd    "snd"
   , Special TokenFst    "fst"
   ]
+
+compositeKeywords :: [([Token], Token)]
+compositeKeywords = [
+  ([TokenLet, TokenLetRec], TokenLetRec)]  -- "let rec"
+
+
+convertCompositeKeywords :: [Token] -> [Token]
+convertCompositeKeywords (x1:x2:xs) = let m = lookup [x1,x2] compositeKeywords in 
+                                          case m of
+                                            Just t -> t : (convertCompositeKeywords xs)
+                                            _      -> x1 : (convertCompositeKeywords (x2:xs))
+convertCompositeKeywords xs    = xs
+
 
 isDigit :: Char -> Bool
 isDigit c = c `elem` "0123456789"
@@ -99,7 +112,7 @@ isIgnore c =  c `elem` " \t\n\r"
 -- always adding a padding space makes
 -- the pattern matching equations just shorter and nicer
 getTokens :: String -> [Token]
-getTokens s = tokenize (s ++ " ")
+getTokens s = convertCompositeKeywords $ tokenize (s ++ " ")
 
 tokenize :: String -> [Token]
 tokenize [] = []
@@ -125,6 +138,13 @@ readSpecial acc s@(x:xs)
       | isArrow a  = (TokenArrow, s)
       | otherwise  = error $ "Unexpected Token: " ++ show a
 
+eatIgnores (x:xs)
+  | isIgnore x = eatIgnores xs
+  | otherwise  = x:xs
+
+
+nextNonEmptyTokenIs :: Token -> String -> Bool
+nextNonEmptyTokenIs t xs = t == head (tokenize xs)
 
 readAlpha :: String -> String -> (Token, String)
 readAlpha acc s@(x:xs)

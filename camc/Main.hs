@@ -115,3 +115,4 @@ doCompile f =
 evals :: String -> Value
 evals s = eval (fst $ expression $ getTokens s)
 
+
