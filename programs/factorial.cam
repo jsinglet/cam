@@ -1,0 +1,2 @@
+letrec fact = fun n ->
+       if n == 0 then 0 else let nn = n-1 in (fact) nn in (fact) 1
