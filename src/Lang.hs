@@ -20,7 +20,3 @@ data EXP = EXP_INT Int | EXP_BOOL Bool | EXP_STRING String | EXP_PAIR EXP EXP
   | EXP_LET String EXP EXP
   | EXP_LETREC String EXP EXP
   deriving (Show, Eq)
-
-aaaa (x:xs) = case (xs) of
-  (EXP_INT i:xs) | i == 3 -> 3
-  (EXP_BOOL b:xs) |  b == True -> 3
