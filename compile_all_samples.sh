@@ -1,5 +1,6 @@
 #!/bin/sh
 
 for f in programs/*.cam; do
-    stack exec cam -- -compile $f
+    echo "Trying to compile $f"
+    stack exec camc -- -compile $f
 done
