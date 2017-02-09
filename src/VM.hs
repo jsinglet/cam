@@ -10,7 +10,8 @@ module VM where
 
 import Debug.Trace
 import Text.Printf
-import Data.List  
+import Data.List
+
 data Value =
   ConstInt Int
   | ConstBool Bool
@@ -18,19 +19,24 @@ data Value =
   | Pair (Ref Value) (Ref Value)
   | Adr [Instruction]
   | Nil
-           deriving (Read, Show, Eq, Ord)
+  deriving (Read, Show, Eq, Ord)
 
 
 data Ref a = Ref Int ([a] -> a)
+
+--
+-- empty instance (we just need this to satisfy
+-- the typechecker)
+--
 
 instance Read (Ref a) where
   
 
 instance Ord (Ref a) where
-  (Ref i1 f) `compare` (Ref i2 _) = i1 `compare` i2
+  (Ref i1 _) `compare` (Ref i2 _) = i1 `compare` i2
 
 instance Eq (Ref a) where
-  (Ref i1 f) == (Ref i2 _) = i1 == i2
+  (Ref i1 _) == (Ref i2 _) = i1 == i2
 
 data Instruction =
   STOP
@@ -54,19 +60,15 @@ _camTrace (instruction,mem,values)= trace (printf "%-30s %-10s %-10s" (ishow ins
 
 dumpStack stack = trace (printf "[CAM FAULT]\n\n\nSTACKDUMP:\n\n %-10s" (formatBlock "STACK" stack))
 
-
-
 instance Show (Ref a) where
   show (Ref idx _) = printf "#%s" (show idx)
 
-ref :: [Value] -> Ref a -> Value
-ref mem b = ConstInt 3
-
+-- this is super tricky; we model memory references as partially evaluated functions. 
 makePair :: [Value] -> Value -> Value  -> (Value, [Value])
 makePair mem v1 v2 = let mr = (length mem) in let p = Pair (Ref mr (access mr)) (Ref (mr+1) (access (mr+1))) in
   (p, mem ++ [v1,v2])
   where
-    access n mem = (mem !! n)
+    access n m = (m !! n)
 
 
 
@@ -83,7 +85,7 @@ exec :: [Instruction]    -- the code
   -> [Value]             -- the memory
   -> [Value]             -- the stack
   -> Value               -- the resulting value of execution 
-exec [ixn@STOP] m@mem vs@[v]                     = _camTrace (ixn,m,vs) $ v
+exec [ixn@STOP] m vs@[v]                         = _camTrace (ixn,m,vs) $ v
 exec (ixn@(LOAD v):code) m@mem vs@(_:stack)      = _camTrace (ixn,m,vs) $ exec code mem (v:stack)
 exec (ixn@(PUSH v):code) m@mem vs@stack          = _camTrace (ixn,m,vs) $ exec code mem (v:stack)
 exec (ixn@DUPL:code) m@mem vs@(v:stack)          = _camTrace (ixn,m,vs) $ exec code mem (v:v:stack)
@@ -93,24 +95,19 @@ exec (ixn@IROT3:code) m@mem vs@(v1:v2:v3:stack)  = _camTrace (ixn,m,vs) $ exec c
 exec (ixn@FST:code) m@mem vs@((Pair (Ref _ v1) _):stack) = _camTrace (ixn,m,vs) $ exec code mem ((v1 mem):stack)
 exec (ixn@SND:code) m@mem vs@((Pair _ (Ref _ v2)):stack) = _camTrace (ixn,m,vs) $ exec code mem ((v2 mem):stack)
 
-
 exec (ixn@SETFST:code) m@mem vs@(v:(Pair (Ref i1 v1) (Ref i2 v2)):stack) = _camTrace (ixn, m, vs) $ let p = Pair (Ref i1 v1) (Ref i2 v2) in
   let mem' = replaceLocation i1 v mem in exec code mem' (p:stack)
-
 exec (ixn@SETSND:code) m@mem vs@(v:(Pair (Ref i1 v1) (Ref i2 v2)):stack) = _camTrace (ixn, m, vs) $ let p = Pair (Ref i1 v1) (Ref i2 v2) in
   let mem' = replaceLocation i2 v mem in exec code mem' (p:stack)
-
-
 exec (ixn@SPLIT:code) m@mem vs@((Pair (Ref _ v1) (Ref _ v2)):stack) = _camTrace (ixn, m, vs) $ exec code mem ((v1 mem):(v2 mem):stack)
 exec (ixn@CONS:code) m@mem vs@(v1:v2:stack) = _camTrace (ixn, m, vs) $ let (p,mem') = makePair mem v1 v2 in exec code mem' (p:stack)
+
+
 exec (ixn@ADD:code) m@mem vs@(ConstInt a:ConstInt b:stack) = _camTrace (ixn,m,vs) $ exec code mem ((ConstInt (a + b)):stack)
 exec (ixn@SUB:code) m@mem vs@(ConstInt a:ConstInt b:stack) = _camTrace (ixn,m,vs) $ exec code mem ((ConstInt (a - b)):stack)
 exec (ixn@MULT:code) m@mem vs@(ConstInt a:ConstInt b:stack) = _camTrace (ixn,m,vs) $ exec code mem ((ConstInt (a * b)):stack)
-
 exec (ixn@EQUAL:code) m@mem vs@(a:b:stack) = _camTrace (ixn,m,vs) $ exec code mem ((ConstBool (a == b)):stack)
-
 exec (ixn@B_LT:code) m@mem vs@(a:b:stack) = _camTrace (ixn,m,vs) $ exec code mem ((ConstBool (a < b)):stack)
-
 exec (ixn@B_GT:code) m@mem vs@(a:b:stack) = _camTrace (ixn,m,vs) $ exec code mem ((ConstBool (a > b)):stack)
 
 
@@ -120,17 +117,8 @@ exec (ixn@(BRANCH adr1 adr2):code) m@mem vs@(ConstBool b:stack) = _camTrace (ixn
                                                            exec code mem (adr1:stack)
                                                        else
                                                            exec code mem (adr2:stack)
--- fall thru case
+-- fall thru case -- dump stack if this happens.
 exec (a:_) _ stack = dumpStack stack $ error $ "Invalid Instruction: " ++ (show a)
-
-
-
-
-
-
-
--- dereference memory location 
-(#!) = 0
 
 
 tshow :: Value -> String
@@ -138,7 +126,6 @@ tshow (ConstInt a) = show a
 tshow (ConstBool b) = show b
 tshow (ConstString s) = s
 tshow (Pair v1 _)     = printf "%s" (show v1)
---show (Pair v1 v2) = printf "(%s, %s)" (show v1) (show v2)
 tshow (Adr ixns) = printf "[%s]" (ishowAr ixns)
 tshow Nil        = "Nil"
 
