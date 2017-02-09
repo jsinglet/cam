@@ -1,0 +1,1 @@
+let rec p = [1,[2,p]] in fst(snd(snd p))
