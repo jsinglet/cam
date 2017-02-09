@@ -21,8 +21,16 @@ data Value =
            deriving (Read, Show, Eq, Ord)
 
 
-data Ref a = Ref Int a
-  deriving (Read, Eq, Ord)
+data Ref a = Ref Int ([a] -> a)
+
+instance Read (Ref a) where
+  
+
+instance Ord (Ref a) where
+  (Ref i1 f) `compare` (Ref i2 _) = i1 `compare` i2
+
+instance Eq (Ref a) where
+  (Ref i1 f) == (Ref i2 _) = i1 == i2
 
 data Instruction =
   STOP
@@ -49,19 +57,27 @@ dumpStack stack = trace (printf "[CAM FAULT]\n\n\nSTACKDUMP:\n\n %-10s" (formatB
 
 
 instance Show (Ref a) where
-  show (Ref idx b) = printf "#%s" (show idx)
+  show (Ref idx _) = printf "#%s" (show idx)
 
 ref :: [Value] -> Ref a -> Value
 ref mem b = ConstInt 3
 
 makePair :: [Value] -> Value -> Value  -> (Value, [Value])
-makePair mem v1 v2 = let mr = (length mem) in let p = Pair (Ref mr v1) (Ref (mr+1) v2) in
+makePair mem v1 v2 = let mr = (length mem) in let p = Pair (Ref mr (access mr)) (Ref (mr+1) (access (mr+1))) in
   (p, mem ++ [v1,v2])
+  where
+    access n mem = (mem !! n)
 
-replaceLocation :: Int -> a -> [a] -> [a]
+
+
+-- since we are "faking" memory, replacing a memory location consists of two steps
+-- first, we replace the physical location (the value at index in the array)
+-- second, we look through the array for memory references. 
+replaceLocation :: Int -> Value -> [Value] -> [Value]
 replaceLocation n v (x:xs)
      | n == 0 = (v:xs)
      | otherwise = x:replaceLocation (n-1) v xs  
+
 
 exec :: [Instruction]    -- the code
   -> [Value]             -- the memory
@@ -74,18 +90,18 @@ exec (ixn@DUPL:code) m@mem vs@(v:stack)          = _camTrace (ixn,m,vs) $ exec c
 exec (ixn@SWAP:code) m@mem vs@(v:v':stack)       = _camTrace (ixn,m,vs) $ exec code mem (v':v:stack)
 exec (ixn@ROT3:code) m@mem vs@(v1:v2:v3:stack)   = _camTrace (ixn,m,vs) $ exec code mem (v2:v3:v1:stack)
 exec (ixn@IROT3:code) m@mem vs@(v1:v2:v3:stack)  = _camTrace (ixn,m,vs) $ exec code mem (v3:v1:v2:stack)
-exec (ixn@FST:code) m@mem vs@((Pair (Ref _ v1) _):stack) = _camTrace (ixn,m,vs) $ exec code mem (v1:stack)
-exec (ixn@SND:code) m@mem vs@((Pair _ (Ref _ v2)):stack) = _camTrace (ixn,m,vs) $ exec code mem (v2:stack)
+exec (ixn@FST:code) m@mem vs@((Pair (Ref _ v1) _):stack) = _camTrace (ixn,m,vs) $ exec code mem ((v1 mem):stack)
+exec (ixn@SND:code) m@mem vs@((Pair _ (Ref _ v2)):stack) = _camTrace (ixn,m,vs) $ exec code mem ((v2 mem):stack)
 
 
-exec (ixn@SETFST:code) m@mem vs@(v:(Pair (Ref i1 v1) (Ref i2 v2)):stack) = _camTrace (ixn, m, vs) $ let p = Pair (Ref i1 v) (Ref i2 v2) in
+exec (ixn@SETFST:code) m@mem vs@(v:(Pair (Ref i1 v1) (Ref i2 v2)):stack) = _camTrace (ixn, m, vs) $ let p = Pair (Ref i1 v1) (Ref i2 v2) in
   let mem' = replaceLocation i1 v mem in exec code mem' (p:stack)
 
-exec (ixn@SETSND:code) m@mem vs@(v:(Pair (Ref i1 v1) (Ref i2 v2)):stack) = _camTrace (ixn, m, vs) $ let p = Pair (Ref i1 v1) (Ref i2 v) in
+exec (ixn@SETSND:code) m@mem vs@(v:(Pair (Ref i1 v1) (Ref i2 v2)):stack) = _camTrace (ixn, m, vs) $ let p = Pair (Ref i1 v1) (Ref i2 v2) in
   let mem' = replaceLocation i2 v mem in exec code mem' (p:stack)
 
 
-exec (ixn@SPLIT:code) m@mem vs@((Pair (Ref _ v1) (Ref _ v2)):stack) = _camTrace (ixn, m, vs) $ exec code mem (v1:v2:stack)
+exec (ixn@SPLIT:code) m@mem vs@((Pair (Ref _ v1) (Ref _ v2)):stack) = _camTrace (ixn, m, vs) $ exec code mem ((v1 mem):(v2 mem):stack)
 exec (ixn@CONS:code) m@mem vs@(v1:v2:stack) = _camTrace (ixn, m, vs) $ let (p,mem') = makePair mem v1 v2 in exec code mem' (p:stack)
 exec (ixn@ADD:code) m@mem vs@(ConstInt a:ConstInt b:stack) = _camTrace (ixn,m,vs) $ exec code mem ((ConstInt (a + b)):stack)
 exec (ixn@SUB:code) m@mem vs@(ConstInt a:ConstInt b:stack) = _camTrace (ixn,m,vs) $ exec code mem ((ConstInt (a - b)):stack)
