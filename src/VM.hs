@@ -51,35 +51,6 @@ data Instruction =
   | BRANCH Value Value
   deriving (Show, Read, Eq, Ord)
 
-formatBlock :: String -> [Value] -> String 
-formatBlock title mem = printf "%s %s" title (tshowAr mem)
-
-_camTrace (b@(BRANCH v1 v2),mem,values)= trace (printf "BRANCH\n\tIF   =%s\n\tELSE =%s\n%-30s %-10s %-10s" (tshow v1) (tshow v2) "BRANCH CONTROL INFO:" (formatBlock "MEM" mem) (formatBlock "STACK" values))
-
-_camTrace (instruction,mem,values)= trace (printf "%-30s %-10s %-10s" (ishow instruction) (formatBlock "MEM" mem) (formatBlock "STACK" values))
-
-dumpStack stack = trace (printf "[CAM FAULT]\n\n\nSTACKDUMP:\n\n %-10s" (formatBlock "STACK" stack))
-
-instance Show (Ref a) where
-  show (Ref idx _) = printf "#%s" (show idx)
-
--- this is super tricky; we model memory references as partially evaluated functions. 
-makePair :: [Value] -> Value -> Value  -> (Value, [Value])
-makePair mem v1 v2 = let mr = (length mem) in let p = Pair (Ref mr (access mr)) (Ref (mr+1) (access (mr+1))) in
-  (p, mem ++ [v1,v2])
-  where
-    access n m = (m !! n)
-
-
-
--- since we are "faking" memory, replacing a memory location consists of two steps
--- first, we replace the physical location (the value at index in the array)
--- second, we look through the array for memory references. 
-replaceLocation :: Int -> Value -> [Value] -> [Value]
-replaceLocation n v (x:xs)
-     | n == 0 = (v:xs)
-     | otherwise = x:replaceLocation (n-1) v xs  
-
 
 exec :: [Instruction]    -- the code
   -> [Value]             -- the memory
@@ -119,6 +90,33 @@ exec (ixn@(BRANCH adr1 adr2):code) m@mem vs@(ConstBool b:stack) = _camTrace (ixn
                                                            exec code mem (adr2:stack)
 -- fall thru case -- dump stack if this happens.
 exec (a:_) _ stack = dumpStack stack $ error $ "Invalid Instruction: " ++ (show a)
+
+
+
+formatBlock :: String -> [Value] -> String 
+formatBlock title mem = printf "%s %s" title (tshowAr mem)
+
+_camTrace (b@(BRANCH v1 v2),mem,values)= trace (printf "BRANCH\n\tIF   =%s\n\tELSE =%s\n%-30s %-10s %-10s" (tshow v1) (tshow v2) "BRANCH CONTROL INFO:" (formatBlock "MEM" mem) (formatBlock "STACK" values))
+
+_camTrace (instruction,mem,values)= trace (printf "%-30s %-10s %-10s" (ishow instruction) (formatBlock "MEM" mem) (formatBlock "STACK" values))
+
+dumpStack stack = trace (printf "[CAM FAULT]\n\n\nSTACKDUMP:\n\n %-10s" (formatBlock "STACK" stack))
+
+instance Show (Ref a) where
+  show (Ref idx _) = printf "#%s" (show idx)
+
+-- this is super tricky; we model memory references as partially evaluated functions. 
+makePair :: [Value] -> Value -> Value  -> (Value, [Value])
+makePair mem v1 v2 = let mr = (length mem) in let p = Pair (Ref mr (access mr)) (Ref (mr+1) (access (mr+1))) in
+  (p, mem ++ [v1,v2])
+  where
+    access n m = (m !! n)
+
+replaceLocation :: Int -> Value -> [Value] -> [Value]
+replaceLocation n v (x:xs)
+     | n == 0 = (v:xs)
+     | otherwise = x:replaceLocation (n-1) v xs  
+
 
 
 tshow :: Value -> String
